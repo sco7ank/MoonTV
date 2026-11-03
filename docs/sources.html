@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>MoonTV · 视频源浏览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:28px 16px 56px;background:#f4f6f8;color:#17202b;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:980px;margin:auto}.hero{background:#111827;color:white;padding:25px;border-radius:20px}.hero h1{margin:0 0 8px;font-size:26px}.hero p{margin:0;color:#cbd5e1}.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.stats span{border:1px solid #ffffff40;border-radius:20px;padding:6px 10px;font-size:12px}.tools{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.tools input{flex:1;min-width:220px;padding:12px 14px;border:1px solid #d7dce3;border-radius:11px;font-size:15px}.tabs{display:flex;gap:7px}.tabs button{padding:10px 13px;border:1px solid #d7dce3;border-radius:10px;background:white;cursor:pointer}.tabs button.active{background:#17202b;color:white}.heading{font-size:17px;margin:20px 2px 12px}.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:11px}.card{background:white;border:1px solid #e4e8ee;border-radius:14px;padding:15px}.name{font-weight:650;margin-bottom:5px}.domain{font-size:12px;color:#7a8492;margin-bottom:12px;overflow-wrap:anywhere}.links{display:flex;gap:8px}.links a{background:#edf3ff;color:#155eef;text-decoration:none;padding:7px 10px;border-radius:8px;font-size:13px}.note{margin-top:22px;color:#7b8491;font-size:12px;line-height:1.7}.status{padding:24px;background:white;border-radius:14px;color:#667085}@media(prefers-color-scheme:dark){body{background:#0e1117;color:#e6edf3}.tools input,.tabs button,.card,.status{background:#161b22;color:#e6edf3;border-color:#30363d}.tabs button.active{background:#e6edf3;color:#111827}.links a{background:#1f2d48;color:#9bbcff}.domain,.note{color:#9aa4b2}}
+</style></head>
+<body><main class="wrap">
+<header class="hero"><h1>MoonTV 视频源浏览</h1><p>点击「打开站点」访问详情页，点击「打开 API」查看接口地址。</p><div class="stats"><span id="total">正在读取配置…</span><span id="normal"></span><span id="adult"></span></div></header>
+<div class="tools"><input id="search" type="search" placeholder="搜索源名称或域名…"><nav class="tabs"><button class="active" data-tab="normal">普通源</button><button data-tab="adult">成人源</button><button data-tab="all">全部</button></nav></div>
+<section id="content" class="status">正在从 GitHub 读取 63 个源…</section>
+<p class="note">本页根据 MoonTV 仓库中的 JSON 配置动态生成。链接是否可访问取决于源站当前状态；本页不提供视频播放。成人源请勿向未成年人展示。</p>
+</main>
+<script>
+const CONFIG_URL="https://raw.githubusercontent.com/sco7ank/MoonTV/main/config/moontv-63-sources.json";
+let sources=[],tab="normal";
+const content=document.getElementById("content"),search=document.getElementById("search");
+const safeUrl=s=>{try{const u=new URL(s);return ["http:","https:"].includes(u.protocol)?u.href:null}catch{return null}};
+function render(){
+ const filtered=sources.filter(x=>{const isAdult=(x.name||"").startsWith("🔞");return (tab==="all"||(tab==="adult"?isAdult:!isAdult))&&((x.name+" "+x.key+" "+x.api+" "+x.detail).toLowerCase().includes(search.value.trim().toLowerCase()))});
+ content.className="";content.innerHTML="";
+ const h=document.createElement("h2");h.className="heading";h.textContent=(tab==="normal"?"普通源":tab==="adult"?"成人源":"全部源")+" · "+filtered.length+" 个";content.append(h);
+ if(!filtered.length){const p=document.createElement("div");p.className="status";p.textContent="没有找到匹配的源";content.append(p);return}
+ const grid=document.createElement("div");grid.className="list";
+ for(const x of filtered){const card=document.createElement("article");card.className="card";const name=document.createElement("div");name.className="name";name.textContent=x.name||x.key;const domain=document.createElement("div");domain.className="domain";domain.textContent=x.key;const links=document.createElement("div");links.className="links";
+ for(const [label,url] of [["打开站点",x.detail],["打开 API",x.api]]){const href=safeUrl(url);if(!href)continue;const a=document.createElement("a");a.href=href;a.target="_blank";a.rel="noopener noreferrer";a.textContent=label;links.append(a)}
+ card.append(name,domain,links);grid.append(card)}content.append(grid)
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));tab=b.dataset.tab;render()}));
+search.addEventListener("input",render);
+fetch(CONFIG_URL).then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.json()}).then(data=>{sources=Object.entries(data.api_site||{}).map(([key,v])=>({key,...v}));const a=sources.filter(x=>(x.name||"").startsWith("🔞")).length;document.getElementById("total").textContent="共 "+sources.length+" 个源";document.getElementById("normal").textContent="普通源："+(sources.length-a);document.getElementById("adult").textContent="成人源："+a;render()}).catch(e=>{content.textContent="配置读取失败："+e.message+"。请稍后刷新页面。"});
+</script></body></html>
